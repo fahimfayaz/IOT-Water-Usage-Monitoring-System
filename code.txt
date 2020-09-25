@@ -1,0 +1,131 @@
+#define BLYNK_PRINT Serial
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+int value1;
+int value2;
+int value3;
+const int led = D5;
+
+WidgetLED led1(V0);
+WidgetLED led2(V1);
+WidgetLED led3(V2);
+
+
+char auth[] = "sNIMXpRB8xFsQnsFNdDYfxMZVWyXTpo6";
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "Mubahere";
+char pass[] = "error404";
+
+#define SENSOR  D6
+long currentMillis = 0;
+long previousMillis = 0;
+int interval = 1000;
+
+float calibrationFactor = 4.5;
+volatile byte pulseCount;
+byte pulse1Sec = 0;
+float flowRate;
+unsigned long flowMilliLitres;
+unsigned int totalMilliLitres;
+float flowLitres;
+float totalLitres;
+
+void IRAM_ATTR pulseCounter()
+{
+  pulseCount++;
+}
+
+BlynkTimer timer;
+
+
+ 
+void setup()
+{
+
+  Serial.begin(115200);
+  timer.setInterval(1000L,sendSensor);
+  Blynk.begin(auth, ssid, pass);
+   pinMode(led,OUTPUT);
+  pinMode(SENSOR, INPUT_PULLUP);
+ 
+  pulseCount = 0;
+  flowRate = 0.0;
+  flowMilliLitres = 0;
+  totalMilliLitres = 0;
+  previousMillis = 0;
+ 
+  attachInterrupt(digitalPinToInterrupt(SENSOR), pulseCounter, FALLING);
+ 
+ 
+  // Setup a function to be called every second
+  timer.setInterval(1000L, sendSensor);
+}
+ 
+void loop()
+{
+ value1= digitalRead(D0);
+  value2=digitalRead(D1);
+  value3=digitalRead(D2);
+  Serial.print("Number1:");
+  Serial.println(value1);
+    Serial.print("Number2:");
+  Serial.println(value2);
+    Serial.print("Number3:");
+  Serial.println(value3);
+ if(value1==1)
+ {
+    led1.on();
+    digitalWrite(led,HIGH);
+    //Serial.println("LED1: ON");
+  }
+  else if(value2==1)
+  {
+     led2.on();
+    //Serial.println("LED2: ON");
+   
+    }
+    else if(value3==1)
+    {
+       led3.on();
+        digitalWrite(led,LOW);
+      // Serial.println("LED3: ON");
+     
+      }
+  else {
+   
+      led1.off();
+   // Serial.println("LED1: off");
+      led2.off();
+   // Serial.println("LED2: off");
+      led3.off();
+    //Serial.println("LED3: off");
+   
+    }
+ 
+  Blynk.run();
+  timer.run();
+}
+
+
+void sendSensor()
+{
+   currentMillis = millis();
+  if (currentMillis - previousMillis > interval)
+  {
+   
+    pulse1Sec = pulseCount;
+    pulseCount = 0;
+    float flowRate = ((1000.0 / (millis() - previousMillis)) * pulse1Sec) / calibrationFactor;
+    previousMillis = millis();
+    flowMilliLitres = (flowRate / 60) * 1000;
+    flowLitres = (flowRate / 60);
+    totalMilliLitres += flowMilliLitres;
+    totalLitres += flowLitres;
+ 
+  Blynk.virtualWrite(V6, flowRate);
+  }
+}
